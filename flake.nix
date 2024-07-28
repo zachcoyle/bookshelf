@@ -1,25 +1,20 @@
 {
-  description = "";
+  description = "Description for the project";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    devshell.url = "github:numtide/devshell";
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ inputs.devshell.flakeModule ];
+      imports = [ ];
       systems = [
-        "aarch64-darwin"
-        "aarch64-linux"
-        "x86_64-darwin"
         "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
       ];
       perSystem =
         {
@@ -33,36 +28,37 @@
         let
 
           buildInputs = with pkgs; [
-            # vulkan-loader # iced
-            wayland
-            wayland-protocols
-            libxkbcommon
+            dbus
+            gdk-pixbuf
+            glib
+            graphene
+            gtk4
+            pango
           ];
 
           nativeBuildInputs = with pkgs; [
+            meson
+            # ninja
             pkg-config
-            # gtk-layer-shell # iced
-            gtk4
+            wrapGAppsHook4
+            rustPlatform.cargoSetupHook
           ];
 
-          bookshelf = inputs.crane.lib.${pkgs.system}.buildPackage {
-            src = ./.;
-            inherit buildInputs nativeBuildInputs;
-          };
+          bookshelf = pkgs.callPackage (
+            { rustPlatform }:
+            rustPlatform.buildRustPackage {
+              pname = "bookshelf";
+              version = "unstable";
+              src = ./.;
 
+              cargoHash = "sha256-n26J4YBtbpD8YkgVeC78dz0m0bAJH9hjox5sY+cvbKY=";
+
+              inherit buildInputs nativeBuildInputs;
+            }
+          ) { };
         in
         {
-
           packages.default = bookshelf;
-
-          devshells.default = {
-            name = "bookshelf";
-            env = [ ];
-            packages = with pkgs; [
-              cargo
-              rustc
-            ];
-          };
         };
     };
 }
